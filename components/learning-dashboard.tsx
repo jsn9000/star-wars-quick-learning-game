@@ -144,30 +144,27 @@ export default function LearningDashboard() {
         </div>
 
         {/* R2-D2 Video Animation */}
-        <div className="flex justify-center mt-8 mb-8">
+        <div className="flex justify-center mt-0 mb-0">
           <div className="w-[600px] h-[450px]">
-            {mounted ? (
-              <video
-                ref={videoRef}
-                width="600"
-                height="450"
-                autoPlay={playVideo}
-                muted
-                playsInline
-                className="w-full h-full"
-                onEnded={() => setPlayVideo(false)}
-              >
-                <source src="/videos/r2d2-video.mp4" type="video/mp4" />
-                Your browser does not support the video tag.
-              </video>
-            ) : (
-              <div className="w-full h-full bg-gray-200 rounded-lg" />
-            )}
+            <video
+              ref={videoRef}
+              width="600"
+              height="450"
+              autoPlay={false}
+              muted
+              playsInline
+              className="w-full h-full"
+              onEnded={() => setPlayVideo(false)}
+              suppressHydrationWarning
+            >
+              <source src="/videos/r2d2-video.mp4" type="video/mp4" />
+              Your browser does not support the video tag.
+            </video>
           </div>
         </div>
 
         {/* Subject Circles */}
-        <div className="flex justify-center items-center gap-16 max-w-4xl mx-auto mt-16" suppressHydrationWarning>
+        <div className="flex justify-center items-center gap-16 max-w-4xl mx-auto mt-0" suppressHydrationWarning>
           {SUBJECTS.map((subject, index) => (
             <div key={subject.id} className="flex flex-col items-center">
               <SubjectCircle
@@ -181,8 +178,8 @@ export default function LearningDashboard() {
         </div>
 
         {/* Game Status */}
-        {isGameStarted && !allCompleted && (
-          <div className="text-center mt-8">
+        {mounted && isGameStarted && !allCompleted && (
+          <div className="text-center mt-8" suppressHydrationWarning>
             <p className="text-lg text-gray-700 font-rajdhani font-medium tracking-wide">
               Progress: {completedSubjects.length} of {SUBJECTS.length} subjects completed
             </p>
@@ -190,8 +187,8 @@ export default function LearningDashboard() {
         )}
 
         {/* Completion Message */}
-        {allCompleted && (
-          <div className="text-center mt-8">
+        {mounted && allCompleted && (
+          <div className="text-center mt-8" suppressHydrationWarning>
             <h2 className="text-2xl font-bold text-green-600 mb-4 font-orbitron tracking-wider">
               ALL SUBJECTS COMPLETED!
             </h2>

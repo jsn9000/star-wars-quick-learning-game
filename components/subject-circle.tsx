@@ -3,6 +3,16 @@
 import { useState, useEffect } from "react";
 import { Subject, Fact, MultipleChoiceQuestion } from "@/lib/facts-data";
 
+// Fisher-Yates shuffle algorithm to randomize array order
+const shuffleArray = <T,>(array: T[]): T[] => {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+};
+
 interface SubjectCircleProps {
   subject: Subject;
   onComplete: (subjectId: string) => void;
@@ -10,6 +20,7 @@ interface SubjectCircleProps {
 }
 
 export default function SubjectCircle({ subject, onComplete, isCompleted }: SubjectCircleProps) {
+  const [shuffledFacts, setShuffledFacts] = useState<Fact[]>([]);
   const [currentFactIndex, setCurrentFactIndex] = useState(0); // Start with fact 1 (index 0)
   const [isFlipped, setIsFlipped] = useState(false);
   const [isStarted, setIsStarted] = useState(false);
@@ -22,7 +33,9 @@ export default function SubjectCircle({ subject, onComplete, isCompleted }: Subj
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+    // Shuffle facts when component mounts
+    setShuffledFacts(shuffleArray(subject.facts));
+  }, [subject.facts]);
 
   const playSound = () => {
     try {
@@ -57,6 +70,9 @@ export default function SubjectCircle({ subject, onComplete, isCompleted }: Subj
 
     if (!isStarted) {
       // First click - start the learning session and show first fact
+      // Shuffle facts for this new game session
+      setShuffledFacts(shuffleArray(subject.facts));
+      setCurrentFactIndex(0);
       setIsStarted(true);
       setTimeRemaining(90); // 90 seconds timer (1 minute 30 seconds)
       setIsFlipped(true);
@@ -68,8 +84,8 @@ export default function SubjectCircle({ subject, onComplete, isCompleted }: Subj
       setIsFlipped(false);
 
       // If this was the last fact, automatically show question after flipping back
-      if (currentFactIndex === subject.facts.length - 1) {
-        const currentFact = subject.facts[currentFactIndex];
+      if (currentFactIndex === shuffledFacts.length - 1) {
+        const currentFact = shuffledFacts[currentFactIndex];
         if (currentFact.question && !questionAnswered) {
           setTimeout(() => {
             setShowingQuestion(true);
@@ -81,7 +97,7 @@ export default function SubjectCircle({ subject, onComplete, isCompleted }: Subj
 
     if (!isFlipped && !showingQuestion) {
       // Currently showing front - advance to next fact
-      if (currentFactIndex < subject.facts.length - 1) {
+      if (currentFactIndex < shuffledFacts.length - 1) {
         // Move to next fact
         setCurrentFactIndex(currentFactIndex + 1);
         setIsFlipped(true);
@@ -93,7 +109,7 @@ export default function SubjectCircle({ subject, onComplete, isCompleted }: Subj
     setSelectedAnswer(answerIndex);
     setQuestionAnswered(true);
 
-    const currentFact = subject.facts[currentFactIndex];
+    const currentFact = shuffledFacts[currentFactIndex];
     const isCorrect = answerIndex === currentFact.question?.correctAnswer;
 
     if (isCorrect) {
@@ -138,46 +154,32 @@ export default function SubjectCircle({ subject, onComplete, isCompleted }: Subj
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  if (!mounted) {
-    return (
-      <div className="flex flex-col items-center space-y-4">
-        <div className="w-52 h-52 bg-gray-100 rounded-full" />
-        <div className="flex space-x-1">
-          {subject.facts.map((_, index) => (
-            <div key={index} className="w-2 h-2 rounded-full bg-gray-300" />
-          ))}
-        </div>
-        <div className="text-sm text-center font-rajdhani font-medium tracking-wide">
-          <span className="text-gray-800 font-bold">CLICK TO START LEARNING</span>
-        </div>
-      </div>
-    );
-  }
+  // Always render the same structure to avoid hydration mismatch
 
   return (
-    <div className="flex flex-col items-center space-y-4" suppressHydrationWarning>
+    <div className="flex flex-col items-center space-y-4">
       {/* Timer Display */}
-      {isStarted && !isCompleted && (
-        <div className="text-lg font-orbitron text-gray-600 font-bold tracking-wider">
+      {mounted && isStarted && !isCompleted && (
+        <div className="text-lg font-orbitron text-gray-600 font-bold tracking-wider" suppressHydrationWarning>
           {formatTime(timeRemaining)}
         </div>
       )}
 
       {/* Multiple Choice Question Above Circle */}
-      {showingQuestion && subject.facts[currentFactIndex]?.question && (
+      {mounted && showingQuestion && shuffledFacts[currentFactIndex]?.question && (
         <div className="w-64 bg-white bg-opacity-95 rounded-lg p-4 shadow-xl border-2 border-blue-300">
           <div className="text-sm font-bold text-gray-900 mb-3 font-orbitron text-center">
-            {subject.facts[currentFactIndex]?.question?.question}
+            {shuffledFacts[currentFactIndex]?.question?.question}
           </div>
           <div className="space-y-2">
-            {subject.facts[currentFactIndex]?.question?.options.map((option, index) => (
+            {shuffledFacts[currentFactIndex]?.question?.options.map((option, index) => (
               <button
                 key={index}
                 onClick={() => handleAnswerSelect(index)}
                 disabled={questionAnswered}
                 className={`w-full text-sm py-2 px-3 rounded border font-exo transition-colors ${
                   questionAnswered
-                    ? index === subject.facts[currentFactIndex]?.question?.correctAnswer
+                    ? index === shuffledFacts[currentFactIndex]?.question?.correctAnswer
                       ? 'bg-green-500 text-white border-green-500'
                       : index === selectedAnswer
                       ? 'bg-red-500 text-white border-red-500'
@@ -191,7 +193,7 @@ export default function SubjectCircle({ subject, onComplete, isCompleted }: Subj
           </div>
           {questionAnswered && (
             <div className="mt-3 text-center font-orbitron font-bold">
-              {selectedAnswer === subject.facts[currentFactIndex]?.question?.correctAnswer ? (
+              {selectedAnswer === shuffledFacts[currentFactIndex]?.question?.correctAnswer ? (
                 <div className="text-green-600 text-sm">
                   Excellent, young Padawan!
                 </div>
@@ -262,19 +264,19 @@ export default function SubjectCircle({ subject, onComplete, isCompleted }: Subj
             className="absolute inset-0 w-full h-full rounded-full bg-white border-4 border-gray-300 flex items-center justify-center p-4 text-center backface-hidden rotate-y-180"
           >
             <div className="text-sm text-gray-800 leading-relaxed font-exo">
-              {subject.facts[currentFactIndex]?.text}
+              {shuffledFacts[currentFactIndex]?.text}
             </div>
           </div>
         </div>
       </div>
 
       {/* Progress Indicator */}
-      <div className="flex space-x-1">
-        {subject.facts.map((_, index) => (
+      <div className="flex space-x-1" suppressHydrationWarning>
+        {shuffledFacts.map((_, index) => (
           <div
             key={index}
             className={`w-2 h-2 rounded-full transition-colors duration-300 ${
-              index <= currentFactIndex && isStarted ? 'bg-green-500' : 'bg-gray-300'
+              mounted && index <= currentFactIndex && isStarted ? 'bg-green-500' : 'bg-gray-300'
             }`}
           />
         ))}
@@ -282,12 +284,16 @@ export default function SubjectCircle({ subject, onComplete, isCompleted }: Subj
 
       {/* Status Text */}
       <div className="text-sm text-center font-rajdhani font-medium tracking-wide" suppressHydrationWarning>
-        {gameEnded ? <span className="text-red-600 font-bold">GAME ENDED - CLICK TO TRY AGAIN</span> :
-         !isStarted ? <span className="text-gray-800 font-bold">CLICK TO START LEARNING</span> :
-         isCompleted ? <span className="text-gray-600">COMPLETED!</span> :
-         showingQuestion ? <span className="text-blue-600 font-bold">ANSWER THE QUESTION ABOVE</span> :
-         isFlipped ? <span className="text-green-600 font-bold">CLICK TO CONTINUE</span> :
-         <span className="text-gray-600">{`FACT ${currentFactIndex + 1} OF ${subject.facts.length} - CLICK TO FLIP`}</span>}
+        {mounted ? (
+          gameEnded ? <span className="text-red-600 font-bold">GAME ENDED - CLICK TO TRY AGAIN</span> :
+          !isStarted ? <span className="text-gray-800 font-bold">CLICK TO START LEARNING</span> :
+          isCompleted ? <span className="text-gray-600">COMPLETED!</span> :
+          showingQuestion ? <span className="text-blue-600 font-bold">ANSWER THE QUESTION ABOVE</span> :
+          isFlipped ? <span className="text-green-600 font-bold">CLICK TO CONTINUE</span> :
+          <span className="text-gray-600">{`FACT ${currentFactIndex + 1} OF ${shuffledFacts.length} - CLICK TO FLIP`}</span>
+        ) : (
+          <span className="text-gray-800 font-bold">CLICK TO START LEARNING</span>
+        )}
       </div>
     </div>
   );
