@@ -123,6 +123,16 @@ export default function LearningDashboard() {
 
   const allCompleted = completedSubjects.length === SUBJECTS.length;
 
+  // Play winning sound when all subjects are completed
+  useEffect(() => {
+    if (allCompleted && completedSubjects.length > 0) {
+      const audio = new Audio('/sounds/winner-game-sound-404167.mp3');
+      audio.play().catch(error => {
+        console.log('Could not play winning sound:', error);
+      });
+    }
+  }, [allCompleted, completedSubjects.length]);
+
   return (
     <div className="min-h-screen bg-white relative overflow-hidden">
 
