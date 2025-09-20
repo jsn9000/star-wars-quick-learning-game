@@ -19,7 +19,7 @@ This project strictly uses **pnpm**. Do not use npm or yarn.
 
 ## Architecture
 
-This is a TypeScript Next.js 15 starter template for AI-powered applications:
+This is a TypeScript Next.js 15 starter template for AI-powered travel assistant applications:
 
 ### Core Stack
 - **Next.js 15** with App Router
@@ -29,15 +29,35 @@ This is a TypeScript Next.js 15 starter template for AI-powered applications:
 
 ### Key Directories
 - `app/` - Next.js App Router pages and API routes
-- `app/api/chat/` - AI chat endpoint using non-streaming `generateText()`
+- `app/api/chat/` - AI chat endpoint using non-streaming `generateText()` with web search tools
 - `components/ui/` - shadcn/ui components
+- `components/ai-elements/` - Vercel AI Elements for chat interface
+- `components/chat/` - Main chat interface component
+- `components/agent/` - System prompt configuration for travel agent
 - `lib/utils.ts` - Utility functions including `cn()` for className merging
 
 ### AI Integration
 - Uses AI SDK 5's `generateText()` for non-streaming responses
-- Configured for GPT-5 via OpenAI provider
-- API route at `/api/chat` expects `{ message: string }` and returns `{ response: string }`
+- Configured for GPT-5 via OpenAI provider with web search tools
+- API route at `/api/chat` expects `{ messages: Array<{role, content}> }` and returns `{ response: string, sources: Array, toolCalls: Array }`
+- Chat interface handles conversation history, sources display, and tool execution
+- System prompt configured as travel destination agent in `components/agent/prompt.ts`
 - Requires `OPENAI_API_KEY` in `.env.local`
+
+### Chat Architecture & Data Flow
+
+```text
+ChatAssistant (Client)        →   /api/chat (Server)          →   OpenAI GPT-5 + Web Search
+- AI Elements UI              →   - Validates messages array  →   - generateText() with tools
+- Conversation history        →   - Calls AI SDK             →   - Web search capability
+- Sources & tool display      →   - Returns response + data  →   - Travel agent system prompt
+```
+
+The chat interface:
+1. Maintains conversation history as message array
+2. Sends full conversation context to API
+3. Displays AI responses with sources and tool executions
+4. Handles loading states and error scenarios
 
 ### UI Components
 - **shadcn/ui** configured with:
@@ -48,8 +68,8 @@ This is a TypeScript Next.js 15 starter template for AI-powered applications:
 - **AI Elements** from Vercel:
   - Pre-built components for AI applications
   - Located in `components/ai-elements/`
-  - Key components: Conversation, Message, PromptInput
-  - Uses `UIMessage` type from AI SDK
+  - Key components: Conversation, Message, PromptInput, Sources, Tool
+  - Main chat interface in `components/chat/chat-assistant.tsx`
 
 ### Adding Components
 - shadcn/ui: `pnpm dlx shadcn@latest add [component-name]`

@@ -1,3 +1,6 @@
+/* Futuristic Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Exo+2:wght@300;400;500;600;700&family=Rajdhani:wght@300;400;500;600;700&display=swap');
+
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -118,5 +121,29 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* 3D Flip Animation Utilities */
+@layer utilities {
+  .preserve-3d {
+    transform-style: preserve-3d;
+  }
+  .backface-hidden {
+    backface-visibility: hidden;
+  }
+  .rotate-y-180 {
+    transform: rotateY(180deg);
+  }
+
+  /* Futuristic Font Classes */
+  .font-orbitron {
+    font-family: 'Orbitron', monospace;
+  }
+  .font-exo {
+    font-family: 'Exo 2', sans-serif;
+  }
+  .font-rajdhani {
+    font-family: 'Rajdhani', sans-serif;
   }
 }
