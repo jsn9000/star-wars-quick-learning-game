@@ -9,11 +9,11 @@ export default function RulesDropdown() {
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="bg-white bg-opacity-90 rounded-lg p-3 shadow-lg hover:bg-opacity-100 transition-all duration-200 flex items-center gap-2"
+        className="bg-red-600 hover:bg-red-700 rounded-lg p-3 shadow-lg transition-all duration-200 flex items-center gap-2"
       >
-        <span className="font-bold text-gray-800 font-orbitron tracking-wider">RULES</span>
+        <span className="font-bold text-white font-orbitron tracking-wider">RULES</span>
         <svg
-          className={`w-4 h-4 text-gray-600 transition-transform duration-200 ${
+          className={`w-4 h-4 text-white transition-transform duration-200 ${
             isOpen ? 'rotate-180' : ''
           }`}
           fill="none"

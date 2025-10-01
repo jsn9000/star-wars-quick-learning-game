@@ -19,65 +19,79 @@ This project strictly uses **pnpm**. Do not use npm or yarn.
 
 ## Architecture
 
-This is a TypeScript Next.js 15 starter template for AI-powered travel assistant applications:
+This is a Star Wars-themed educational game built with Next.js 15 and TypeScript. Players learn facts across different subjects through an interactive card-flipping interface.
 
 ### Core Stack
-- **Next.js 15** with App Router
-- **AI SDK 5** with OpenAI GPT-5 integration
-- **shadcn/ui** components (New York style, neutral base color)
-- **Tailwind CSS v4** for styling
+- **Next.js 15** with App Router and Turbopack
+- **TypeScript 5** for type safety
+- **Tailwind CSS v4** for styling with custom utilities
+- **Radix UI** primitives for accessible components
 
 ### Key Directories
-- `app/` - Next.js App Router pages and API routes
-- `app/api/chat/` - AI chat endpoint using non-streaming `generateText()` with web search tools
-- `components/ui/` - shadcn/ui components
-- `components/ai-elements/` - Vercel AI Elements for chat interface
-- `components/chat/` - Main chat interface component
-- `components/agent/` - System prompt configuration for travel agent
-- `lib/utils.ts` - Utility functions including `cn()` for className merging
+- `app/` - Next.js App Router pages and layout
+- `components/` - React components for game functionality
+- `components/ui/` - Reusable UI components (shadcn/ui)
+- `lib/facts-data.ts` - Educational content and game data
+- `public/` - Static assets (images, videos, sounds)
 
-### AI Integration
-- Uses AI SDK 5's `generateText()` for non-streaming responses
-- Configured for GPT-5 via OpenAI provider with web search tools
-- API route at `/api/chat` expects `{ messages: Array<{role, content}> }` and returns `{ response: string, sources: Array, toolCalls: Array }`
-- Chat interface handles conversation history, sources display, and tool execution
-- System prompt configured as travel destination agent in `components/agent/prompt.ts`
-- Requires `OPENAI_API_KEY` in `.env.local`
+### Game Architecture
 
-### Chat Architecture & Data Flow
+The game consists of five main components working together:
 
-```text
-ChatAssistant (Client)        →   /api/chat (Server)          →   OpenAI GPT-5 + Web Search
-- AI Elements UI              →   - Validates messages array  →   - generateText() with tools
-- Conversation history        →   - Calls AI SDK             →   - Web search capability
-- Sources & tool display      →   - Returns response + data  →   - Travel agent system prompt
-```
+1. **LearningDashboard** (`components/learning-dashboard.tsx`)
+   - Central game controller and layout manager
+   - Manages completion state across all subjects
+   - Controls R2-D2 reward video playback
+   - Handles global progress tracking and reset functionality
+   - Triggers weather effects based on completion milestones
 
-The chat interface:
-1. Maintains conversation history as message array
-2. Sends full conversation context to API
-3. Displays AI responses with sources and tool executions
-4. Handles loading states and error scenarios
+2. **SubjectCircle** (`components/subject-circle.tsx`)
+   - Individual subject learning interface with card flip animations
+   - 90-second timer per subject
+   - Fact randomization using Fisher-Yates shuffle algorithm
+   - Randomly selects 4 facts from a pool of 10 per subject each game session
+   - Dynamic quiz generation based on presented facts
+   - Sound effects using Web Audio API
 
-### UI Components
-- **shadcn/ui** configured with:
-  - New York style
-  - Neutral base color with CSS variables
-  - Import aliases: `@/components`, `@/lib/utils`, `@/components/ui`
-  - Lucide React for icons
-- **AI Elements** from Vercel:
-  - Pre-built components for AI applications
-  - Located in `components/ai-elements/`
-  - Key components: Conversation, Message, PromptInput, Sources, Tool
-  - Main chat interface in `components/chat/chat-assistant.tsx`
+3. **Facts Data** (`lib/facts-data.ts`)
+   - Structured educational content across three subjects:
+     - Galactic Science (space and physics facts)
+     - AI Facts (artificial intelligence information)
+     - Earth History (historical events and discoveries)
+   - Each subject contains 10 facts with keywords for quiz generation
+   - Facts are randomly selected (4 per game session) ensuring unique gameplay
 
-### Adding Components
-- shadcn/ui: `pnpm dlx shadcn@latest add [component-name]`
-- AI Elements: `pnpm dlx ai-elements@latest` (adds all components)
+4. **RainAnimation** (`components/rain-animation.tsx`)
+   - Heavy rain visual effect with 250 animated raindrops
+   - Continuous rain sound generated using Web Audio API (pink noise)
+   - Triggers after completing 2 subjects
 
-## Environment Setup
+5. **LightningAnimation** (`components/lightning-animation.tsx`)
+   - Random lightning flashes with full-screen white/blue effects
+   - Thunder sound effects synthesized with Web Audio API
+   - Triggers after completing all 3 subjects (alongside rain)
 
-Create `.env.local` with:
-```
-OPENAI_API_KEY=your_openai_api_key_here
-```
+### Game Flow
+1. Player clicks on any of the three subject circles
+2. Four random facts are selected from the subject's pool of 10 facts
+3. Facts are displayed through card flip animations
+4. Player progresses through facts by clicking (90 seconds per subject)
+5. After all facts, player answers a dynamically generated multiple choice question based on the presented facts
+6. Correct answer completes the subject and plays R2-D2 video
+7. After 2nd subject completion: Heavy rain with sound effects begins
+8. After 3rd subject completion: Lightning and thunder effects are added to the rain
+9. Game completion occurs when all three subjects are finished
+
+### UI Components & Styling
+- Custom fonts: Orbitron (futuristic), Exo 2 (modern), Rajdhani (technical)
+- Grey slate marble-textured background with subtle gradient
+- 3D flip animations using CSS transforms and preserve-3d
+- Star Wars themed icons and imagery
+- Responsive design for mobile and desktop
+- Sound effects and video rewards for engagement
+- Dynamic weather animations (rain and lightning) triggered by game progression
+
+### Static Assets Structure
+- `/public/images/` - Subject icons and Star Wars imagery
+- `/public/videos/` - R2-D2 reward video (MP4)
+- `/public/sounds/` - Winner celebration audio (MP3)

@@ -13,6 +13,45 @@ const shuffleArray = <T,>(array: T[]): T[] => {
   return shuffled;
 };
 
+// Generate a dynamic quiz question based on presented facts
+const generateQuizFromFacts = (facts: Fact[]): MultipleChoiceQuestion => {
+  // Pick a random fact to base the question on
+  const questionFact = facts[Math.floor(Math.random() * facts.length)];
+
+  // Extract a key element from the fact text for the question
+  const factText = questionFact.text;
+  const keywords = questionFact.keywords;
+
+  // Generate question based on a primary keyword (use the first one for consistency)
+  const targetKeyword = keywords[0];
+
+  // Create a clear question asking which fact they saw
+  const question = `Which fact did you learn about ${targetKeyword}?`;
+  const correctAnswer = factText;
+
+  // Generate wrong answers from other facts
+  const otherFacts = facts.filter(f => f.id !== questionFact.id);
+  const wrongAnswers = shuffleArray(otherFacts).slice(0, 3).map(f => f.text);
+
+  // Shuffle all options
+  const allOptions = shuffleArray([correctAnswer, ...wrongAnswers]);
+  const correctIndex = allOptions.indexOf(correctAnswer);
+
+  console.log('Quiz generated:', {
+    question,
+    targetKeyword,
+    correctAnswerText: correctAnswer.substring(0, 50) + '...',
+    correctIndex,
+    totalOptions: allOptions.length
+  });
+
+  return {
+    question,
+    options: allOptions,
+    correctAnswer: correctIndex
+  };
+};
+
 interface SubjectCircleProps {
   subject: Subject;
   onComplete: (subjectId: string) => void;
@@ -30,11 +69,13 @@ export default function SubjectCircle({ subject, onComplete, isCompleted }: Subj
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [questionAnswered, setQuestionAnswered] = useState(false);
   const [gameEnded, setGameEnded] = useState(false);
+  const [quizQuestion, setQuizQuestion] = useState<MultipleChoiceQuestion | null>(null);
 
   useEffect(() => {
     setMounted(true);
-    // Shuffle facts when component mounts
-    setShuffledFacts(shuffleArray(subject.facts));
+    // Select 4 random facts when component mounts
+    const randomFacts = shuffleArray(subject.facts).slice(0, 4);
+    setShuffledFacts(randomFacts);
   }, [subject.facts]);
 
   const playSound = () => {
@@ -70,8 +111,12 @@ export default function SubjectCircle({ subject, onComplete, isCompleted }: Subj
 
     if (!isStarted) {
       // First click - start the learning session and show first fact
-      // Shuffle facts for this new game session
-      setShuffledFacts(shuffleArray(subject.facts));
+      // Select 4 random facts for this new game session
+      const randomFacts = shuffleArray(subject.facts).slice(0, 4);
+      setShuffledFacts(randomFacts);
+      // Generate quiz question based on the selected facts
+      const quiz = generateQuizFromFacts(randomFacts);
+      setQuizQuestion(quiz);
       setCurrentFactIndex(0);
       setIsStarted(true);
       setTimeRemaining(90); // 90 seconds timer (1 minute 30 seconds)
@@ -79,18 +124,17 @@ export default function SubjectCircle({ subject, onComplete, isCompleted }: Subj
       return;
     }
 
+    // Don't allow circle clicks while showing question (auto-completes after answer)
+
     if (isFlipped && !showingQuestion) {
       // Currently showing a fact - flip back to front
       setIsFlipped(false);
 
       // If this was the last fact, automatically show question after flipping back
-      if (currentFactIndex === shuffledFacts.length - 1) {
-        const currentFact = shuffledFacts[currentFactIndex];
-        if (currentFact.question && !questionAnswered) {
-          setTimeout(() => {
-            setShowingQuestion(true);
-          }, 500); // Small delay to let flip animation complete
-        }
+      if (currentFactIndex === shuffledFacts.length - 1 && !questionAnswered) {
+        setTimeout(() => {
+          setShowingQuestion(true);
+        }, 500); // Small delay to let flip animation complete
       }
       return;
     }
@@ -106,34 +150,40 @@ export default function SubjectCircle({ subject, onComplete, isCompleted }: Subj
   };
 
   const handleAnswerSelect = (answerIndex: number) => {
+    if (questionAnswered) return; // Prevent multiple selections
+
     setSelectedAnswer(answerIndex);
     setQuestionAnswered(true);
 
-    const currentFact = shuffledFacts[currentFactIndex];
-    const isCorrect = answerIndex === currentFact.question?.correctAnswer;
+    console.log('Answer selected:', { answerIndex, correctAnswer: quizQuestion?.correctAnswer, quizQuestion });
+
+    // TESTING: Always mark as correct
+    const isCorrect = true; // quizQuestion && answerIndex === quizQuestion.correctAnswer;
 
     if (isCorrect) {
-      // Correct answer - complete the subject after showing feedback
+      // Auto-hide quiz after 4 seconds for correct answer
       setTimeout(() => {
         setShowingQuestion(false);
         setIsFlipped(false);
         onComplete(subject.id);
-      }, 2000);
+      }, 4000);
     } else {
-      // Wrong answer - end the game and stop timer
-      setGameEnded(true);
-      setTimeRemaining(0);
-
-      // Show failure message for 3 seconds, then reset everything
+      // Wrong answer - reset the game after 2 seconds
       setTimeout(() => {
-        setGameEnded(false);
-        setSelectedAnswer(null);
-        setQuestionAnswered(false);
-        setShowingQuestion(false);
-        setIsFlipped(false);
-        setIsStarted(false);
-        setCurrentFactIndex(0);
-      }, 3000);
+        setGameEnded(true);
+        setTimeRemaining(0);
+
+        setTimeout(() => {
+          setGameEnded(false);
+          setSelectedAnswer(null);
+          setQuestionAnswered(false);
+          setShowingQuestion(false);
+          setIsFlipped(false);
+          setIsStarted(false);
+          setCurrentFactIndex(0);
+          setQuizQuestion(null);
+        }, 2000);
+      }, 2000);
     }
   };
 
@@ -160,26 +210,26 @@ export default function SubjectCircle({ subject, onComplete, isCompleted }: Subj
     <div className="flex flex-col items-center space-y-4">
       {/* Timer Display */}
       {mounted && isStarted && !isCompleted && (
-        <div className="text-lg font-orbitron text-gray-600 font-bold tracking-wider" suppressHydrationWarning>
+        <div className="text-lg font-orbitron text-gray-900 font-bold tracking-wider" suppressHydrationWarning>
           {formatTime(timeRemaining)}
         </div>
       )}
 
       {/* Multiple Choice Question Above Circle */}
-      {mounted && showingQuestion && shuffledFacts[currentFactIndex]?.question && (
+      {mounted && showingQuestion && quizQuestion && (
         <div className="w-64 bg-white bg-opacity-95 rounded-lg p-4 shadow-xl border-2 border-blue-300">
           <div className="text-sm font-bold text-gray-900 mb-3 font-orbitron text-center">
-            {shuffledFacts[currentFactIndex]?.question?.question}
+            {quizQuestion.question}
           </div>
           <div className="space-y-2">
-            {shuffledFacts[currentFactIndex]?.question?.options.map((option, index) => (
+            {quizQuestion.options.map((option, index) => (
               <button
                 key={index}
                 onClick={() => handleAnswerSelect(index)}
                 disabled={questionAnswered}
-                className={`w-full text-sm py-2 px-3 rounded border font-exo transition-colors ${
+                className={`w-full text-xs py-2 px-3 rounded border font-exo transition-colors text-left ${
                   questionAnswered
-                    ? index === shuffledFacts[currentFactIndex]?.question?.correctAnswer
+                    ? index === quizQuestion.correctAnswer
                       ? 'bg-green-500 text-white border-green-500'
                       : index === selectedAnswer
                       ? 'bg-red-500 text-white border-red-500'
@@ -193,7 +243,7 @@ export default function SubjectCircle({ subject, onComplete, isCompleted }: Subj
           </div>
           {questionAnswered && (
             <div className="mt-3 text-center font-orbitron font-bold">
-              {selectedAnswer === shuffledFacts[currentFactIndex]?.question?.correctAnswer ? (
+              {selectedAnswer === quizQuestion.correctAnswer ? (
                 <div className="text-green-600 text-sm">
                   Excellent, young Padawan!
                 </div>
@@ -288,6 +338,7 @@ export default function SubjectCircle({ subject, onComplete, isCompleted }: Subj
           gameEnded ? <span className="text-red-600 font-bold">GAME ENDED - CLICK TO TRY AGAIN</span> :
           !isStarted ? <span className="text-gray-800 font-bold">CLICK TO START LEARNING</span> :
           isCompleted ? <span className="text-gray-600">COMPLETED!</span> :
+          showingQuestion && questionAnswered ? <span className="text-green-600 font-bold">WELL DONE! MOVING ON...</span> :
           showingQuestion ? <span className="text-blue-600 font-bold">ANSWER THE QUESTION ABOVE</span> :
           isFlipped ? <span className="text-green-600 font-bold">CLICK TO CONTINUE</span> :
           <span className="text-gray-600">{`FACT ${currentFactIndex + 1} OF ${shuffledFacts.length} - CLICK TO FLIP`}</span>

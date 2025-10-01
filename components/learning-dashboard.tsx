@@ -4,6 +4,9 @@ import { useState, useEffect, useRef } from "react";
 import { SUBJECTS } from "@/lib/facts-data";
 import SubjectCircle from "./subject-circle";
 import RulesDropdown from "./rules-dropdown";
+import RainAnimation from "./rain-animation";
+import LightningAnimation from "./lightning-animation";
+import VictoryScreen from "./victory-screen";
 
 interface CompletionRewardProps {
   onClose: () => void;
@@ -18,14 +21,14 @@ function CompletionReward({ onClose }: CompletionRewardProps) {
 
   if (!mounted) {
     return (
-      <div className="fixed inset-0 bg-white z-50 flex items-center justify-center">
+      <div className="fixed inset-0 bg-gradient-to-br from-slate-300 via-slate-200 to-slate-300 z-50 flex items-center justify-center">
         <div className="w-[400px] h-[300px]" />
       </div>
     );
   }
 
   return (
-    <div className="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center">
+    <div className="fixed inset-0 bg-gradient-to-br from-slate-300 via-slate-200 to-slate-300 z-50 flex flex-col items-center justify-center">
       <div className="text-center mb-8">
         <h1 className="text-4xl font-bold text-green-600 mb-4">🎉 Congratulations! 🎉</h1>
         <p className="text-xl text-gray-700">You've completed all subjects!</p>
@@ -63,6 +66,10 @@ export default function LearningDashboard() {
   const [mounted, setMounted] = useState(false);
   const [playVideo, setPlayVideo] = useState(false);
   const [resetKey, setResetKey] = useState(0);
+  const [showRain, setShowRain] = useState(false);
+  const [showLightning, setShowLightning] = useState(false);
+  const [showVictoryScreen, setShowVictoryScreen] = useState(false);
+  const [victoryPhase, setVictoryPhase] = useState<"waiting" | "dark" | "light">("waiting");
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
@@ -97,6 +104,16 @@ export default function LearningDashboard() {
       setCompletedSubjects(newCompleted);
       console.log("New completed subjects:", newCompleted);
 
+      // Trigger rain animation after second subject completion
+      if (newCompleted.length === 2) {
+        setShowRain(true);
+      }
+
+      // Trigger lightning after third subject completion (all subjects)
+      if (newCompleted.length === 3) {
+        setShowLightning(true);
+      }
+
       // Play video for each completed subject
       console.log("Setting playVideo to true");
       setPlayVideo(true);
@@ -118,23 +135,40 @@ export default function LearningDashboard() {
     setIsGameStarted(false);
     setGlobalTimer(300);
     setPlayVideo(false);
+    setShowRain(false);
+    setShowLightning(false);
+    setShowVictoryScreen(false);
+    setVictoryPhase("waiting");
     setResetKey(prev => prev + 1); // Force re-mount of all circles
   };
 
   const allCompleted = completedSubjects.length === SUBJECTS.length;
 
-  // Play winning sound when all subjects are completed
+  // Play winning sound and trigger victory screen when all subjects are completed
   useEffect(() => {
-    if (allCompleted && completedSubjects.length > 0) {
+    if (allCompleted && completedSubjects.length > 0 && !showVictoryScreen) {
       const audio = new Audio('/sounds/winner-game-sound-404167.mp3');
       audio.play().catch(error => {
         console.log('Could not play winning sound:', error);
       });
+
+      // Show victory screen after a brief delay
+      setTimeout(() => {
+        setShowVictoryScreen(true);
+      }, 500);
     }
-  }, [allCompleted, completedSubjects.length]);
+  }, [allCompleted, completedSubjects.length, showVictoryScreen]);
 
   return (
     <div className="min-h-screen bg-white relative overflow-hidden">
+      {/* Rain Animation - stop when victory message appears */}
+      {showRain && victoryPhase !== "light" && <RainAnimation />}
+
+      {/* Lightning Animation - stop when screen goes dark */}
+      {showLightning && victoryPhase !== "dark" && victoryPhase !== "light" && <LightningAnimation victoryMode={allCompleted} />}
+
+      {/* Victory Screen */}
+      {showVictoryScreen && <VictoryScreen onComplete={() => {}} onPhaseChange={setVictoryPhase} />}
 
       {/* Top Section */}
       <div className="relative z-10 p-8">
