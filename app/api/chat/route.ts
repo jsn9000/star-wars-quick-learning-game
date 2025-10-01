@@ -1,46 +1,19 @@
-import { SYSTEM_INSTRUCTIONS } from "@/components/agent/prompt";
 import { openai } from "@ai-sdk/openai";
-import { generateText } from "ai";
-import { NextRequest, NextResponse } from "next/server";
+import { streamText } from "ai";
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
     const { messages } = await request.json();
 
-    if (!messages || !Array.isArray(messages) || messages.length === 0) {
-      return NextResponse.json(
-        { error: "Messages array is required" },
-        { status: 400 }
-      );
-    }
-
-    // Convert frontend message format to AI SDK format
-    const aiMessages = messages.map((msg: any) => ({
-      role: msg.role,
-      content: msg.content,
-    }));
-
-    const result = await generateText({
-      model: openai("gpt-5"),
-      system: SYSTEM_INSTRUCTIONS,
-      messages: aiMessages,
-      tools: {
-        web_search: openai.tools.webSearch({
-          searchContextSize: "low",
-        }),
-      },
+    const result = await streamText({
+      model: openai("gpt-4o-mini"),
+      system: "You are a helpful Star Wars-themed learning assistant. Help users with questions about science, AI, history, and Star Wars facts. Be encouraging and educational.",
+      messages,
     });
 
-    return NextResponse.json({
-      response: result.text,
-      sources: result.sources || [],
-      toolCalls: result.steps || [],
-    });
+    return result.toTextStreamResponse();
   } catch (error) {
     console.error("Chat API error:", error);
-    return NextResponse.json(
-      { error: "Failed to generate response" },
-      { status: 500 }
-    );
+    return new Response("Failed to generate response", { status: 500 });
   }
 }
